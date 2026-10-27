@@ -9,6 +9,16 @@
 
 ---
 
+## 🌐 在线体验
+
+- **直接玩**：<https://hahaaa520.github.io/kiro-repo-hamster/>
+- 演示档案直达：<https://hahaaa520.github.io/kiro-repo-hamster/app/index.html?demo=champion&noloading=1>
+- 仓库地址：<https://github.com/hahaaa520/kiro-repo-hamster>
+
+> 在线版是纯静态 Demo，内置演示档案与分享卡；Kiro Hook 联动需要本地运行 `node app/server.mjs`。
+
+---
+
 ## ✨ 它能做什么
 
 | 功能 | 说明 |
