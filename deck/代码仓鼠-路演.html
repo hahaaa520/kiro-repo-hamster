@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代码仓鼠 · 路演 Deck</title>
+<style>
+:root{
+  --cream:#FFF8EC; --cream2:#FFF1D8; --paper:#FFFDF7;
+  --ink:#2E2117; --ink2:#6B5745; --muted:#9A8672; --brown:#8A5A3B;
+  --line:#EAD8BE; --line-soft:#F2E6D2;
+  --gold:#F3B54A; --gold2:#FFD27A; --gold-soft:#FFF0CF;
+  --purple:#7C5CFF; --purple-deep:#5B3BE0; --purple-soft:#F0EBFF;
+  --pink:#FFB7C5; --pink-soft:#FFE9EE; --green:#6FC58A; --red:#E98A7A;
+  --ease:cubic-bezier(.22,.9,.28,1);
+  --font:"PingFang SC","HarmonyOS Sans SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"SFMono-Regular","JetBrains Mono",Consolas,"Cascadia Code",monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{
+  background:#1E120A; color:var(--ink); font-family:var(--font);
+  overflow:hidden; -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--gold2)}
+#stage{
+  position:fixed; inset:0; overflow:hidden;
+  background:radial-gradient(1300px 800px at 50% 42%, #3B2417 0%, #1E120A 72%);
+}
+#deck{
+  position:absolute; left:50%; top:50%;
+  width:1920px; height:1080px;
+  background:var(--cream); overflow:hidden; border-radius:10px;
+  box-shadow:0 90px 180px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06);
+  transform:translate(-50%,-50%) scale(var(--scale,1));
+  transform-origin:50% 50%;
+  will-change:transform;
+}
+
+/* ---------- 幻灯片基础 ---------- */
+.slide{
+  position:absolute; inset:0; background:var(--cream);
+  opacity:0; visibility:hidden; transform:translateY(26px) scale(.997);
+  transition:opacity .65s var(--ease), transform .65s var(--ease), visibility .65s;
+}
+.slide.is-active{ opacity:1; visibility:visible; transform:none; z-index:2; }
+.slide-bg{ position:absolute; inset:0; overflow:hidden; }
+.slide-bg::before{
+  content:""; position:absolute; inset:0;
+  background-image:radial-gradient(rgba(138,90,59,.14) 1.3px, transparent 1.3px);
+  background-size:34px 34px; opacity:.65;
+  -webkit-mask-image:radial-gradient(ellipse 88% 76% at 50% 38%, #000 10%, transparent 78%);
+          mask-image:radial-gradient(ellipse 88% 76% at 50% 38%, #000 10%, transparent 78%);
+}
+.blob{ position:absolute; border-radius:50%; filter:blur(90px); opacity:.55; }
+.blob-gold{ width:760px; height:760px; background:#FFE3AC; }
+.blob-purple{ width:620px; height:620px; background:#E6DEFF; }
+.blob-pink{ width:520px; height:520px; background:#FFE2E9; }
+.inner{
+  position:absolute; inset:0; padding:150px 140px 108px;
+  display:flex; flex-direction:column; z-index:3;
+}
+
+/* ---------- 顶部/底部 chrome ---------- */
+.chrome{ position:absolute; left:140px; right:140px; z-index:30; display:flex; align-items:center; justify-content:space-between; pointer-events:none; }
+.chrome.top{ top:50px; }
+.chrome.bottom{ bottom:42px; font-size:13px; letter-spacing:.2em; font-weight:800; color:var(--muted); }
+.brand{ display:flex; align-items:center; gap:13px; }
+.brand-mark{
+  width:44px; height:44px; border-radius:14px; display:grid; place-items:center;
+  background:linear-gradient(150deg,#FFE6B4,#FFD080);
+  border:2px solid rgba(138,90,59,.2);
+  box-shadow:0 10px 22px -12px rgba(138,90,59,.7), inset 0 2px 0 #fff;
+  transform:rotate(-3deg);
+}
+.brand-mark svg{ width:32px; height:32px; display:block; }
+.brand-text b{ display:block; font-size:19px; font-weight:900; letter-spacing:.02em; line-height:1.1; }
+.brand-text i{ display:block; font-style:normal; font-size:8.5px; letter-spacing:.32em; color:var(--muted); font-weight:800; margin-top:4px; }
+.chrome-right{ display:flex; align-items:center; gap:18px; }
+.pill-track{
+  display:inline-flex; align-items:center; gap:9px; height:38px; padding:0 17px;
+  border-radius:99px; border:2px solid #EAD3A6; background:#FFF6E0;
+  font-size:13px; font-weight:900; color:#7a5a2a; letter-spacing:.04em;
+}
+.pill-track::before{ content:""; width:9px; height:9px; border-radius:50%; background:var(--gold); box-shadow:0 0 0 4px rgba(243,181,74,.2); }
+.page-num{ font-family:var(--mono); font-size:14px; font-weight:700; color:var(--muted); letter-spacing:.14em; }
+.progress{ position:absolute; left:0; bottom:0; height:5px; width:12.5%; background:linear-gradient(90deg,var(--gold),var(--purple)); z-index:31; transition:width .55s var(--ease); }
+.nav-hint{ position:absolute; right:140px; bottom:80px; z-index:30; font-size:13px; color:var(--muted); opacity:.75; letter-spacing:.1em; }
+/* 屏幕适配控制条：任何窗口都能一键适配/手动缩放 */
+.deck-ctrl{
+  position:fixed; right:18px; bottom:18px; z-index:60;
+  display:flex; align-items:center; gap:6px;
+  padding:7px 9px; border-radius:99px;
+  background:rgba(30,18,10,.62); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,248,236,.16);
+  color:#FFF8EC; font-family:var(--font); font-size:12px; font-weight:800;
+  opacity:.45; transition:opacity .2s;
+}
+.deck-ctrl:hover{ opacity:1; }
+.deck-ctrl button{
+  height:26px; min-width:28px; padding:0 9px;
+  border:1px solid rgba(255,248,236,.22); border-radius:99px;
+  background:rgba(255,248,236,.08); color:#FFF8EC;
+  font-family:inherit; font-size:12px; font-weight:800; cursor:pointer;
+}
+.deck-ctrl button:hover{ background:rgba(255,248,236,.2); }
+.deck-ctrl .z{ min-width:48px; text-align:center; color:#FFD27A; letter-spacing:.04em; }
+.static .deck-ctrl{ display:none; }
+
+/* ---------- 通用文字组件 ---------- */
+.kicker{
+  display:flex; align-items:center; gap:14px; margin:0 0 28px;
+  font-size:15px; font-weight:900; letter-spacing:.3em; color:var(--purple-deep);
+}
+.kicker::before{ content:""; width:36px; height:3px; border-radius:3px; background:var(--purple); }
+.slide-title{
+  font-size:74px; line-height:1.16; letter-spacing:-.025em; font-weight:900;
+  margin:0 0 40px; max-width:1560px;
+}
+.slide-title .hl{ background:linear-gradient(transparent 60%, rgba(255,208,122,.95) 60%); padding:0 10px; border-radius:4px; }
+.slide-title .hl-p{ color:var(--purple-deep); }
+.foot-note{ font-size:19px; color:var(--muted); line-height:1.7; }
+.sticker{
+  display:inline-flex; align-items:center; gap:8px;
+  background:#FFE8B6; border:2px solid #EFD29A; border-radius:10px;
+  color:#8a5a1f; font-size:17px; font-weight:900; letter-spacing:.03em;
+  padding:9px 17px; box-shadow:0 12px 26px -18px rgba(138,90,59,.75);
+}
+
+/* ---------- 入场动画 ---------- */
+.anim{ opacity:0; transform:translateY(34px); }
+.anim-l{ transform:translateX(-42px); }
+.anim-r{ transform:translateX(42px); }
+.anim-s{ transform:scale(.94); }
+.slide.is-active .anim{
+  opacity:1; transform:none;
+  transition:opacity .85s var(--ease) var(--d,0s), transform .85s var(--ease) var(--d,0s);
+}
+.static .anim{ opacity:1 !important; transform:none !important; transition:none !important; }
+.static .slide{ transition:none !important; }
+.static .nav-hint{ display:none; }
+.static #deck{ border-radius:0; box-shadow:none; }
+
+/* ---------- 仓鼠动画（复用 app 的 SVG 类名） ---------- */
+.hm-body{ transform-box:fill-box; transform-origin:50% 94%; animation:hm-breathe 3.6s ease-in-out infinite; }
+.hm-ear-l,.hm-ear-r{ transform-box:fill-box; transform-origin:50% 90%; animation:hm-ear 5.2s ease-in-out infinite; }
+.hm-ear-r{ animation-delay:-2.6s; }
+.eyes-normal{ transform-box:fill-box; transform-origin:50% 50%; animation:hm-blink 5.6s infinite; }
+.hm-paw-l,.hm-paw-r{ transform-box:fill-box; transform-origin:50% 50%; animation:hm-paw 3.6s ease-in-out infinite; }
+.hm-paw-r{ animation-delay:-1.8s; }
+.hm-tear,.hm-cloud,.hm-zzz,.hm-seed{ display:none; }
+.hamster-svg[data-state="emo"] .hm-all{ filter:saturate(.72) brightness(.98); }
+.hamster-svg[data-state="emo"] .hm-tear{ display:block; animation:hm-tear 2.6s ease-in infinite; transform-box:fill-box; transform-origin:top center; }
+.hamster-svg[data-state="emo"] .hm-cloud{ display:block; animation:hm-cloud 4s ease-in-out infinite; }
+.hamster-svg[data-state="emo"] .hm-mouth{ display:none; }
+
+/* ---------- 漂浮装饰 ---------- */
+.seed{
+  position:absolute; width:16px; height:23px; border-radius:60% 40% 55% 45%/60% 55% 45% 40%;
+  background:linear-gradient(160deg,#FFD27A,#EBA83C);
+  box-shadow:inset -2px -3px 0 rgba(138,90,59,.18); opacity:.6;
+}
+.tw{ position:absolute; color:var(--purple); opacity:.3; font-size:26px; }
+
+/* ---------- 封面 ---------- */
+.s1 .inner{ padding:0; }
+.cover-grid{
+  position:absolute; inset:0; display:grid; grid-template-columns:1.04fr .96fr;
+  padding:118px 140px 96px; align-items:center;
+}
+.hero-title{
+  font-size:198px; line-height:.94; letter-spacing:-.05em; font-weight:900;
+  margin:0 0 24px; color:var(--ink);
+}
+.hero-title .hl{ background:linear-gradient(transparent 58%, rgba(255,208,122,.95) 58%); padding:0 10px; border-radius:6px; }
+.cover-sub{ font-size:56px; font-weight:900; margin:0 0 24px; letter-spacing:-.01em; }
+.cover-desc{ font-size:23px; line-height:1.85; color:var(--ink2); margin:0 0 38px; }
+.cover-pills{ display:flex; gap:14px; flex-wrap:wrap; }
+.pill{
+  display:inline-flex; align-items:center; gap:9px; height:52px; padding:0 22px;
+  border-radius:99px; border:2px solid var(--line); background:rgba(255,253,247,.85);
+  font-size:18px; font-weight:800; color:var(--ink2);
+}
+.cover-right{ position:relative; height:100%; display:flex; align-items:center; justify-content:center; }
+.cover-ham{ width:640px; position:relative; z-index:3; animation:float 5s ease-in-out infinite; }
+.cover-ham svg{ width:100%; height:auto; display:block; filter:drop-shadow(0 46px 56px rgba(138,90,59,.24)); }
+.cover-platform{
+  position:absolute; left:50%; bottom:126px; transform:translateX(-50%);
+  width:660px; height:180px; border-radius:50%; z-index:1;
+  background:radial-gradient(60% 100% at 50% 8%, #FFF3D9 0%, #FFE4B6 58%, rgba(255,220,160,0) 100%);
+}
+.speech{
+  position:absolute; right:-6px; top:110px; z-index:5; max-width:340px;
+  background:#fff; border:2px solid var(--line); border-radius:26px 26px 8px 26px;
+  padding:22px 26px; font-size:20px; line-height:1.7; color:var(--ink2);
+  box-shadow:0 30px 60px -30px rgba(138,90,59,.65); transform:rotate(2deg);
+}
+.speech::after{
+  content:""; position:absolute; left:34px; bottom:-11px; width:20px; height:20px;
+  background:#fff; border-right:2px solid var(--line); border-bottom:2px solid var(--line);
+  transform:rotate(45deg); border-bottom-right-radius:4px;
+}
+.sticker-seed{ position:absolute; right:26px; bottom:236px; z-index:5; transform:rotate(5deg); }
+.cover-foot{ position:absolute; left:140px; bottom:96px; font-size:12.5px; letter-spacing:.34em; font-weight:800; color:var(--muted); }
+
+/* ---------- S2 痛点 ---------- */
+.s2-grid{ display:grid; grid-template-columns:1.06fr .94fr; gap:70px; flex:1; align-items:center; min-height:0; }
+.notes{ display:flex; flex-direction:column; gap:15px; }
+.note{
+  position:relative; width:420px; padding:18px 24px 19px;
+  background:#FFFDF7; border:2px solid var(--line); border-radius:22px;
+  box-shadow:0 34px 64px -48px rgba(138,90,59,.85);
+}
+.note:nth-child(1){ transform:rotate(-1.2deg); background:#FFF6E0; }
+.note:nth-child(2){ transform:rotate(.8deg); margin-left:44px; background:#FFF0F3; }
+.note:nth-child(3){ transform:rotate(-.6deg); margin-left:12px; background:#F4F1FF; }
+.note h4{ display:flex; align-items:center; gap:12px; font-size:24px; font-weight:900; margin:0 0 6px; letter-spacing:-.01em; }
+.note h4 b{
+  flex:none; display:inline-grid; place-items:center; width:34px; height:34px; border-radius:10px;
+  background:var(--gold2); color:#7a4a12; font-size:13px; font-weight:900; font-family:var(--mono);
+}
+.note p{ font-size:15px; line-height:1.65; color:var(--ink2); margin:0; }
+.contrib-panel{
+  position:relative; background:#FFFDF7; border:2px solid var(--line);
+  border-radius:30px; padding:32px 34px 36px;
+  box-shadow:0 40px 80px -56px rgba(138,90,59,.9);
+}
+.contrib-head{ display:flex; align-items:baseline; justify-content:space-between; font-size:17px; font-weight:900; color:var(--ink2); margin-bottom:22px; }
+.contrib-head span{ font-family:var(--mono); font-size:15px; color:var(--red); }
+.contrib-grid-lg{ display:grid; grid-template-columns:repeat(14, 26px); grid-auto-rows:26px; gap:7px; }
+.cell{ border-radius:6px; background:#F2E6D2; }
+.cell.on{ background:linear-gradient(145deg,#FFD27A,#F3B54A); }
+.contrib-caption{ margin:26px 0 0; font-size:18px; color:var(--muted); font-weight:700; }
+.sad-ham{ position:absolute; right:26px; bottom:-46px; width:216px; filter:drop-shadow(0 26px 30px rgba(138,90,59,.22)); }
+.s2-quote{ margin:26px 0 0; font-size:25px; font-weight:800; color:var(--ink2); }
+.s2-quote b{ color:var(--purple-deep); }
+
+/* ---------- S3 机制 ---------- */
+.s3-grid{ display:grid; grid-template-columns:1fr 1fr; gap:64px; flex:1; align-items:center; min-height:0; }
+.steps{ display:flex; flex-direction:column; gap:20px; }
+.step{
+  display:flex; gap:22px; align-items:flex-start;
+  background:#FFFDF7; border:2px solid var(--line); border-radius:22px;
+  padding:24px 28px; box-shadow:0 28px 56px -44px rgba(138,90,59,.9);
+}
+.step b{
+  flex:none; font-family:var(--mono); font-size:15px; color:var(--purple-deep);
+  background:var(--purple-soft); border-radius:10px; padding:6px 9px; margin-top:2px;
+}
+.step h4{ font-size:24px; font-weight:900; margin:0 0 6px; }
+.step p{ font-size:16px; line-height:1.65; color:var(--ink2); margin:0; }
+.board{
+  position:relative; background:linear-gradient(160deg,#FFF5E1,#FFE6BB);
+  border:2px solid var(--line); border-radius:34px; padding:30px 32px 32px;
+  box-shadow:0 46px 90px -60px rgba(138,90,59,.95);
+}
+.board-ham{ width:270px; margin:-8px auto 6px; animation:float 5.2s ease-in-out infinite; }
+.board-ham svg{ width:100%; height:auto; display:block; filter:drop-shadow(0 26px 30px rgba(138,90,59,.2)); }
+.stats4{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.stat-card{ background:#FFFDF7; border:2px solid var(--line); border-radius:16px; padding:14px 16px; }
+.stat-card .row{ display:flex; align-items:baseline; justify-content:space-between; font-size:15px; font-weight:900; color:var(--ink2); }
+.stat-card .row b{ font-size:19px; color:var(--ink); font-variant-numeric:tabular-nums; }
+.stat-card .bar{ height:9px; border-radius:9px; background:#F0E2C9; margin-top:10px; overflow:hidden; }
+.stat-card .bar i{ display:block; height:100%; width:var(--w); border-radius:9px; background:linear-gradient(90deg,#F6C878,#F3B54A); }
+.stat-card:nth-child(2) .bar i{ background:linear-gradient(90deg,#B8A6FF,#7C5CFF); }
+.stat-card:nth-child(3) .bar i{ background:linear-gradient(90deg,#FFC5D1,#F58BA0); }
+.stat-card:nth-child(4) .bar i{ background:linear-gradient(90deg,#A6E7BC,#6FC58A); }
+.mapping{ display:flex; gap:12px; flex-wrap:wrap; margin-top:22px; justify-content:center; }
+.map-chip{
+  background:#FFFDF7; border:2px dashed #D9C4A2; border-radius:99px;
+  padding:9px 17px; font-size:15px; font-weight:800; color:var(--ink2);
+}
+.map-chip b{ color:var(--purple-deep); }
+
+/* ---------- S4 Demo ---------- */
+.s4-grid{ display:grid; grid-template-columns:.66fr 1.34fr; gap:56px; flex:1; align-items:center; min-height:0; }
+.callouts{ display:flex; flex-direction:column; gap:20px; }
+.callout{ display:flex; gap:18px; align-items:flex-start; }
+.callout b{
+  flex:none; width:44px; height:44px; border-radius:14px; display:grid; place-items:center;
+  background:var(--purple); color:#fff; font-family:var(--mono); font-size:15px; font-weight:800;
+  box-shadow:0 14px 24px -14px rgba(91,59,224,.9);
+}
+.callout h4{ font-size:22px; font-weight:900; margin:4px 0 5px; }
+.callout p{ font-size:15.5px; line-height:1.6; color:var(--ink2); margin:0; }
+.browser{
+  position:relative; background:#fff; border:2px solid #E7D4B6; border-radius:26px;
+  box-shadow:0 60px 110px -60px rgba(138,90,59,.95);
+  transform:rotate(-.7deg);
+}
+.browser-bar{ height:54px; background:#FFF4DE; border-bottom:2px solid #F0E2C9; display:flex; align-items:center; gap:10px; padding:0 22px; border-radius:24px 24px 0 0; }
+.dot{ width:13px; height:13px; border-radius:50%; }
+.dot.r{ background:#F28B82; } .dot.y{ background:#F6C45C; } .dot.g{ background:#7BC88A; }
+.url{
+  margin-left:14px; height:30px; padding:0 15px; border-radius:99px;
+  border:2px solid #F0E2C9; background:#fff; display:flex; align-items:center; gap:8px;
+  font-family:var(--mono); font-size:12px; color:var(--muted); font-weight:700;
+}
+.browser img{ display:block; width:100%; aspect-ratio:1600/1000; object-fit:cover; object-position:top; border-radius:0 0 24px 24px; }
+.hook-sticker{
+  position:absolute; right:-16px; top:-20px; z-index:5;
+  background:#F0EBFF; border:2px solid #D9CFFF; color:var(--purple-deep);
+  border-radius:12px; padding:11px 16px; font-size:14px; font-weight:900;
+  box-shadow:0 18px 34px -24px rgba(91,59,224,.9); transform:rotate(3deg);
+}
+.hook-sticker i{ display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--purple); margin-right:7px; box-shadow:0 0 0 4px rgba(124,92,255,.16); }
+
+/* ---------- S5 魔法 ---------- */
+.s5-grid{ display:grid; grid-template-columns:1.06fr .94fr; gap:76px; flex:1; align-items:center; min-height:0; }
+.bug-stack{ display:flex; flex-direction:column; gap:20px; }
+.bug-card{
+  background:#FFFDF7; border:2px solid var(--line); border-radius:22px; padding:24px 28px;
+  box-shadow:0 34px 64px -50px rgba(138,90,59,.95); position:relative;
+}
+.bug-card:nth-child(1){ transform:rotate(-.8deg); }
+.bug-card:nth-child(2){ transform:rotate(.7deg); margin-left:26px; }
+.bug-card:nth-child(3){ transform:rotate(-.4deg); margin-left:8px; }
+.bug-top{ display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.sev{ font-size:11px; font-weight:900; letter-spacing:.08em; padding:3px 9px; border-radius:99px; }
+.sev.mild{ background:#E7F7EC; color:#3f7c52; }
+.sev.medium{ background:var(--gold-soft); color:#8a5a1f; }
+.sev.hot{ background:var(--pink-soft); color:#b0455a; }
+.loc{ font-family:var(--mono); font-size:13px; color:var(--muted); }
+.bug-card h4{ font-size:23px; font-weight:900; margin:0 0 6px; line-height:1.45; }
+.bug-card p{ font-size:15px; color:var(--ink2); margin:0; line-height:1.6; }
+.share-wrap{ position:relative; display:flex; justify-content:center; align-items:center; }
+.share-wrap img{
+  width:486px; border-radius:18px; border:2px solid #EFE0C8;
+  box-shadow:0 60px 110px -46px rgba(138,90,59,.95); transform:rotate(3deg);
+}
+.tape{ position:absolute; top:2px; left:50%; width:176px; height:40px; background:rgba(243,181,74,.55); transform:translateX(-50%) rotate(-3deg); border-radius:3px; z-index:2; }
+.share-cap{ position:absolute; left:50%; bottom:-66px; transform:translateX(-50%); width:520px; text-align:center; font-size:16px; color:var(--muted); font-weight:700; }
+.s5-foot{ margin:18px 0 0; font-size:19px; color:var(--muted); }
+.s5-foot b{ color:var(--ink2); }
+
+/* ---------- S6 Kiro ---------- */
+.pipeline{ display:grid; grid-template-columns:repeat(5, 1fr); gap:18px; margin-bottom:30px; }
+.pipe{
+  position:relative; background:#FFFDF7; border:2px solid var(--line); border-radius:22px;
+  padding:22px 20px; min-height:222px; box-shadow:0 30px 56px -46px rgba(138,90,59,.9);
+}
+.pipe .no{ font-family:var(--mono); font-size:12.5px; font-weight:800; color:var(--purple-deep); letter-spacing:.1em; }
+.pipe .ic{ width:46px; height:46px; border-radius:14px; background:var(--purple-soft); display:grid; place-items:center; font-size:21px; margin:6px 0 12px; }
+.pipe h4{ font-size:20px; font-weight:900; margin:0 0 8px; }
+.pipe p{ font-size:14.5px; line-height:1.6; color:var(--ink2); margin:0; }
+.pipe::after{
+  content:"→"; position:absolute; right:-19px; top:50%; transform:translateY(-50%);
+  color:#D9C4A2; font-size:21px; font-weight:900; background:var(--cream); padding:3px; z-index:2;
+}
+.pipe:last-child::after{ display:none; }
+.s6-bottom{ display:grid; grid-template-columns:1.08fr .92fr; gap:28px; flex:1; min-height:0; }
+.code-card{
+  background:#2C1F15; border-radius:22px; padding:26px 30px; overflow:hidden;
+  font-family:var(--mono); font-size:15px; line-height:1.95; color:#F3E7D3;
+  box-shadow:0 40px 80px -56px rgba(46,33,23,.95);
+  display:flex; flex-direction:column; justify-content:center;
+}
+.code-card .file{ color:#FFD27A; font-weight:700; }
+.code-card .k{ color:#B8A6FF; }
+.code-card .s{ color:#9BE0B0; }
+.code-card .c{ color:#8C7360; }
+.code-card .cur{ display:inline-block; width:9px; height:18px; background:#FFD27A; vertical-align:-3px; animation:caret 1s step-end infinite; }
+.kiro-quote{
+  background:linear-gradient(150deg,var(--purple) 0%,var(--purple-deep) 100%);
+  color:#fff; border-radius:22px; padding:34px 36px;
+  display:flex; flex-direction:column; justify-content:center;
+  box-shadow:0 40px 80px -50px rgba(91,59,224,.9);
+}
+.kiro-quote p{ font-size:34px; font-weight:900; line-height:1.4; margin:0; letter-spacing:-.01em; }
+.kiro-quote span{ margin-top:18px; font-size:13px; letter-spacing:.24em; opacity:.72; font-weight:800; }
+
+/* ---------- S7 传播 ---------- */
+.s7-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:26px; flex:1; min-height:0; }
+.reason{
+  background:#FFFDF7; border:2px solid var(--line); border-radius:26px; padding:30px;
+  display:flex; flex-direction:column; gap:20px;
+  box-shadow:0 40px 76px -56px rgba(138,90,59,.95);
+}
+.reason .visual{
+  height:196px; border-radius:18px; background:linear-gradient(150deg,#FFF3DC,#FFE8C2);
+  display:grid; place-items:center; overflow:hidden; position:relative;
+}
+.reason:nth-child(2) .visual{ background:linear-gradient(150deg,#F4F0FF,#E7E0FF); }
+.reason:nth-child(3) .visual{ background:linear-gradient(150deg,#FFF0F4,#FFE2EA); }
+.reason h4{ font-size:26px; font-weight:900; margin:0; }
+.reason p{ font-size:16px; line-height:1.7; color:var(--ink2); margin:0; }
+.reason .judge{
+  margin-top:auto; padding-top:14px; border-top:1.5px dashed var(--line);
+  font-size:14.5px; font-weight:800; color:var(--purple-deep); letter-spacing:.02em;
+}
+.reason .judge::before{ content:"✓ "; }
+.reason .quote{
+  margin-top:12px; background:#FFF8E9; border:1.5px dashed var(--line);
+  border-radius:14px; padding:12px 16px; font-size:15px; line-height:1.6; color:var(--ink2);
+}
+.reason .quote b{ color:var(--purple-deep); }
+.big-glyph{ font-size:64px; font-weight:900; letter-spacing:.12em; color:var(--brown); }
+.big-glyph span{ color:var(--purple-deep); }
+.mini-input{
+  width:340px; height:58px; border-radius:15px; background:#fff; border:2px solid var(--line);
+  display:flex; align-items:center; padding:0 18px; gap:10px; box-shadow:0 18px 36px -26px rgba(138,90,59,.9);
+  font-size:15px; color:var(--muted); font-weight:700;
+}
+.mini-input b{ margin-left:auto; background:var(--purple); color:#fff; border-radius:10px; padding:7px 12px; font-size:13px; }
+.mini-card{
+  width:118px; background:#FFF8EC; border:2px solid var(--line); border-radius:12px;
+  padding:10px; box-shadow:0 18px 36px -26px rgba(138,90,59,.9); transform:rotate(4deg);
+}
+.mini-card .mc-title{ font-size:9px; font-weight:900; letter-spacing:.16em; color:var(--purple-deep); text-align:center; }
+.mini-card .mc-bar{ height:5px; border-radius:5px; background:#F0E2C9; margin-top:7px; }
+.mini-card .mc-bar i{ display:block; height:100%; border-radius:5px; background:var(--gold); width:70%; }
+.mini-card .mc-ham{ font-size:30px; text-align:center; margin:4px 0; }
+.tape-line{
+  margin-top:26px; align-self:flex-start;
+  display:inline-flex; align-items:center; gap:14px;
+  font-size:14px; font-weight:900; letter-spacing:.24em; color:var(--muted);
+}
+.tape-line::before, .tape-line::after{ content:""; width:70px; height:2px; background:#E4D2B4; }
+
+/* ---------- S8 结尾 ---------- */
+.s8{ position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; padding:0 140px; }
+.end-small{ font-size:62px; font-weight:900; color:var(--muted); margin:0 0 14px; letter-spacing:-.02em; }
+.end-big{ font-size:92px; line-height:1.22; font-weight:900; margin:0; letter-spacing:-.03em; max-width:1250px; }
+.end-big .hl{ background:linear-gradient(transparent 60%, rgba(255,208,122,.95) 60%); padding:0 10px; border-radius:5px; }
+.cta{
+  margin-top:52px; display:inline-flex; align-items:center; gap:16px; align-self:flex-start;
+  background:linear-gradient(150deg,var(--purple),var(--purple-deep)); color:#fff;
+  border-radius:99px; padding:18px 32px; font-size:21px; font-weight:900;
+  box-shadow:0 28px 54px -30px rgba(91,59,224,.95);
+}
+.cta span{ font-size:14px; font-weight:700; opacity:.8; letter-spacing:.02em; }
+.end-ham{ position:absolute; right:150px; bottom:150px; width:400px; animation:float 5s ease-in-out infinite; }
+.end-ham svg{ width:100%; height:auto; display:block; filter:drop-shadow(0 40px 44px rgba(138,90,59,.22)); }
+.thanks{ position:absolute; right:150px; top:160px; font-size:18px; letter-spacing:.34em; font-weight:900; color:var(--muted); }
+.team-line{ position:absolute; left:140px; bottom:96px; font-size:13px; letter-spacing:.18em; color:var(--muted); font-weight:700; }
+
+/* ---------- 关键帧 ---------- */
+@keyframes float{ 0%,100%{ transform:translateY(0) rotate(-.4deg); } 50%{ transform:translateY(-14px) rotate(.5deg); } }
+@keyframes hm-breathe{ 0%,100%{ transform:scale(1,1); } 50%{ transform:scale(1.018,.982); } }
+@keyframes hm-blink{ 0%,92%,100%{ transform:scaleY(1); } 94.5%,96.5%{ transform:scaleY(.08); } }
+@keyframes hm-ear{ 0%,80%,100%{ transform:rotate(0); } 86%{ transform:rotate(-5deg); } 92%{ transform:rotate(4deg); } }
+@keyframes hm-paw{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-2px); } }
+@keyframes hm-tear{ 0%{ transform:translateY(0) scale(.6); opacity:0; } 20%{ opacity:1; } 80%{ transform:translateY(26px) scale(1); opacity:.9; } 100%{ transform:translateY(34px) scale(1); opacity:0; } }
+@keyframes hm-cloud{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-5px); } }
+@keyframes caret{ 0%,49%{ opacity:.9; } 50%,100%{ opacity:0; } }
+@keyframes drift{ 0%,100%{ transform:translate(0,0) rotate(0); } 33%{ transform:translate(12px,-22px) rotate(14deg); } 66%{ transform:translate(-8px,12px) rotate(-10deg); } }
+@keyframes twinkle{ 0%,100%{ opacity:.2; transform:scale(.85); } 50%{ opacity:.55; transform:scale(1.1); } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="deck">
+
+    <!-- ================= 01 封面 ================= -->
+    <section class="slide s1" data-slide="1">
+      <div class="slide-bg">
+        <span class="blob blob-gold" style="left:-260px;top:-320px"></span>
+        <span class="blob blob-purple" style="right:-240px;bottom:-340px"></span>
+        <span class="seed" style="left:9%;top:22%;animation:drift 9s ease-in-out infinite"></span>
+        <span class="seed" style="left:47%;bottom:15%;width:12px;height:17px;animation:drift 12s ease-in-out infinite reverse"></span>
+        <span class="tw" style="left:52%;top:14%">✦</span>
+        <span class="tw" style="left:12%;bottom:24%;color:var(--gold)">✦</span>
+      </div>
+      <div class="cover-grid">
+        <div class="cover-left">
+          <p class="kicker anim" style="--d:.05s">KIRO 鬼点子计划 · 无用之用 / USELESS BUT USEFUL</p>
+          <h1 class="hero-title anim" style="--d:.12s">代码<span class="hl">仓鼠</span></h1>
+          <p class="cover-sub anim" style="--d:.2s">你写代码，它吃饭。</p>
+          <p class="cover-desc anim" style="--d:.28s">一个住在 GitHub 仓库里的电子宠物。<br>输入用户名，3 秒领养。</p>
+          <div class="cover-pills anim" style="--d:.36s">
+            <span class="pill">🐹 3 秒领养</span>
+            <span class="pill">🌰 commit 换瓜子</span>
+            <span class="pill">🌧️ 7 天不写会 emo</span>
+          </div>
+        </div>
+        <div class="cover-right">
+          <div class="cover-platform"></div>
+          <div class="cover-ham anim-s" style="--d:.2s" data-hamster="happy"></div>
+          <div class="speech anim" style="--d:.62s">你好呀，我有点饿。<br>先给我一个 GitHub 用户名。</div>
+          <div class="sticker sticker-seed anim" style="--d:.72s">commit = 瓜子</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 02 痛点 ================= -->
+    <section class="slide s2" data-slide="2">
+      <div class="slide-bg">
+        <span class="blob blob-gold" style="right:-320px;top:-300px;opacity:.35"></span>
+        <span class="blob blob-pink" style="left:-280px;bottom:-300px;opacity:.3"></span>
+      </div>
+      <div class="inner">
+        <p class="kicker anim" style="--d:.05s">01 / THE PROBLEM</p>
+        <h2 class="slide-title anim" style="--d:.12s">每个程序员的仓库里，<br>都住着一只 <span class="hl">饿着的仓鼠</span>。</h2>
+        <div class="s2-grid">
+          <div class="notes">
+            <div class="note anim-l" style="--d:.22s">
+              <h4><b>01</b>commit 拖延症</h4>
+              <p>点子想了三年，仓库还停在 init。不是做不了，是“正经项目”永远排在前面。</p>
+            </div>
+            <div class="note anim-l" style="--d:.32s">
+              <h4><b>02</b>没人 review 的 bug</h4>
+              <p>代码里的刺，只有上线那天才知道疼。而它一直躺在 diff 里，没人看第二眼。</p>
+            </div>
+            <div class="note anim-l" style="--d:.42s">
+              <h4><b>03</b>代码没有温度</h4>
+              <p>需求、排期、上线、复盘。写代码变成流水线，我们忘了它本来可以很好玩。</p>
+            </div>
+          </div>
+          <div class="contrib-panel anim-r" style="--d:.3s">
+            <div class="contrib-head"><span>上周的贡献图</span><span>0 commits</span></div>
+            <div class="contrib-grid-lg" data-contrib="70" data-fill="3"></div>
+            <p class="contrib-caption">它已经饿了 7 天。</p>
+            <div class="sad-ham" data-hamster="emo"></div>
+          </div>
+        </div>
+        <p class="s2-quote anim" style="--d:.56s">“你上一次 commit，是<b>几天前</b>？”</p>
+      </div>
+    </section>
+
+    <!-- ================= 03 机制 ================= -->
+    <section class="slide s3" data-slide="3">
+      <div class="slide-bg">
+        <span class="blob blob-purple" style="right:-300px;top:-260px;opacity:.28"></span>
+        <span class="blob blob-gold" style="left:-320px;bottom:-340px;opacity:.4"></span>
+        <span class="seed" style="right:12%;bottom:18%;animation:drift 10s ease-in-out infinite"></span>
+      </div>
+      <div class="inner">
+        <p class="kicker anim" style="--d:.05s">02 / THE RITUAL</p>
+        <h2 class="slide-title anim" style="--d:.12s">领养一只，<span class="hl">靠 commit 吃饭</span>的仓鼠。</h2>
+        <div class="s3-grid">
+          <div class="steps">
+            <div class="step anim-l" style="--d:.2s">
+              <b>01</b>
+              <div><h4>输入你的 GitHub 用户名</h4><p>不用登录，只读公开仓库。3 秒后，它就住进去了。</p></div>
+            </div>
+            <div class="step anim-l" style="--d:.3s">
+              <b>02</b>
+              <div><h4>它算你的提交，也读你的 diff</h4><p>提交频率、commit message、最新改动——全部变成它的体重、心情、饥饿和亲密度。</p></div>
+            </div>
+            <div class="step anim-l" style="--d:.4s">
+              <b>03</b>
+              <div><h4>你写代码，它吃饭；你摆烂，它 emo</h4><p>7 天不提交它会 emo，14 天它会收拾包袱离家出走。投喂一颗瓜子，它就会回来。</p></div>
+            </div>
+          </div>
+          <div class="board anim-r" style="--d:.28s">
+            <div class="board-ham" data-hamster="happy"></div>
+            <div class="stats4">
+              <div class="stat-card"><div class="row"><span>体重</span><b>83%</b></div><div class="bar"><i style="--w:83%"></i></div></div>
+              <div class="stat-card"><div class="row"><span>心情</span><b>98%</b></div><div class="bar"><i style="--w:98%"></i></div></div>
+              <div class="stat-card"><div class="row"><span>饥饿</span><b>8%</b></div><div class="bar"><i style="--w:8%"></i></div></div>
+              <div class="stat-card"><div class="row"><span>亲密度</span><b>99%</b></div><div class="bar"><i style="--w:99%"></i></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="mapping anim" style="--d:.52s">
+          <span class="map-chip">1 次 commit → <b>1 颗瓜子</b></span>
+          <span class="map-chip">7 天不写 → <b>emo</b></span>
+          <span class="map-chip">14 天 → <b>离家出走</b></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 04 Demo ================= -->
+    <section class="slide s4" data-slide="4">
+      <div class="slide-bg">
+        <span class="blob blob-gold" style="left:-300px;top:-320px;opacity:.4"></span>
+        <span class="blob blob-purple" style="right:-280px;bottom:-320px;opacity:.22"></span>
+      </div>
+      <div class="inner" style="padding-top:136px">
+        <p class="kicker anim" style="--d:.05s">03 / DEMO</p>
+        <h2 class="slide-title anim" style="--d:.12s;margin-bottom:30px">打开就能玩。</h2>
+        <div class="s4-grid">
+          <div class="callouts">
+            <div class="callout anim-l" style="--d:.22s">
+              <b>01</b>
+              <div><h4>3 秒领养</h4><p>输入用户名，它住进你的仓库。只读公开数据。</p></div>
+            </div>
+            <div class="callout anim-l" style="--d:.32s">
+              <b>02</b>
+              <div><h4>一只真的会饿的仓鼠</h4><p>体重、心情、饥饿、亲密度，全由你的提交记录决定。</p></div>
+            </div>
+            <div class="callout anim-l" style="--d:.42s">
+              <b>03</b>
+              <div><h4>腮帮子 + 体检报告</h4><p>它会藏 bug，也会生成一张可以晒的体检报告。</p></div>
+            </div>
+          </div>
+          <div class="browser anim-r" style="--d:.26s">
+            <div class="hook-sticker"><i></i>Kiro Hook 已连接 · 保存代码即投喂</div>
+            <div class="browser-bar">
+              <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+              <span class="url">🔒 localhost:5173 · 代码仓鼠</span>
+            </div>
+            <img src="shots/app-desktop-1600.png" alt="代码仓鼠产品界面：领养仓鼠">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 05 魔法 ================= -->
+    <section class="slide s5" data-slide="5">
+      <div class="slide-bg">
+        <span class="blob blob-pink" style="right:-260px;top:-280px;opacity:.35"></span>
+        <span class="blob blob-purple" style="left:-300px;bottom:-340px;opacity:.24"></span>
+      </div>
+      <div class="inner">
+        <p class="kicker anim" style="--d:.05s">04 / THE MAGIC</p>
+        <h2 class="slide-title anim" style="--d:.12s">它把你漏掉的 bug，<span class="hl">藏进腮帮子</span>。</h2>
+        <div class="s5-grid">
+          <div class="bug-stack">
+            <div class="bug-card anim-l" style="--d:.22s">
+              <div class="bug-top"><span class="sev medium">有点噎人</span><span class="loc">src/feed/parse.ts:42</span></div>
+              <h4>JSON.parse 没包 try / catch，仓鼠被崩了一下牙</h4>
+              <p>建议加个兜底，不然它会吐出来。</p>
+            </div>
+            <div class="bug-card anim-l" style="--d:.32s">
+              <div class="bug-top"><span class="sev mild">小零食</span><span class="loc">src/index.ts:88</span></div>
+              <h4>新增了一颗 console.log("seed!")</h4>
+              <p>仓鼠把它当瓜子壳一起吞了。</p>
+            </div>
+            <div class="bug-card anim-l" style="--d:.42s">
+              <div class="bug-top"><span class="sev mild">小零食</span><span class="loc">src/types.ts:12</span></div>
+              <h4>any 出现了 3 次</h4>
+              <p>腮帮子里有点塞牙。</p>
+            </div>
+          </div>
+          <div class="share-wrap anim-s" style="--d:.34s">
+            <span class="tape"></span>
+            <img src="shots/card-pure.png" alt="仓鼠体检报告分享卡">
+            <span class="share-cap">顺便生成一张体检报告，发给你那个总不 commit 的同事。</span>
+          </div>
+        </div>
+        <p class="s5-foot anim" style="--d:.56s">轻量提示，<b>不是正式 code review</b>——但它会让你想点开看一眼。</p>
+      </div>
+    </section>
+
+    <!-- ================= 06 Kiro ================= -->
+    <section class="slide s6" data-slide="6">
+      <div class="slide-bg">
+        <span class="blob blob-purple" style="left:-300px;top:-300px;opacity:.3"></span>
+        <span class="blob blob-gold" style="right:-320px;bottom:-340px;opacity:.4"></span>
+      </div>
+      <div class="inner">
+        <p class="kicker anim" style="--d:.05s">05 / BUILT WITH KIRO</p>
+        <h2 class="slide-title anim" style="--d:.12s">用 Kiro 做的，<span class="hl">也让 Kiro 养着</span>。</h2>
+        <div class="pipeline">
+          <div class="pipe anim" style="--d:.2s"><div class="no">01</div><div class="ic">📋</div><h4>Quick Spec</h4><p>一句话生成需求、设计、任务三件套，先想清楚再动手。</p></div>
+          <div class="pipe anim" style="--d:.28s"><div class="no">02</div><div class="ic">⚡</div><h4>并行 tasks</h4><p>依赖图自动分波，独立任务同时跑，一个人有一个小队的速度。</p></div>
+          <div class="pipe anim" style="--d:.36s"><div class="no">03</div><div class="ic">🐹</div><h4>Crew 子 Agent</h4><p>仓鼠人格、commit 考古、界面画师，三个 Agent 分工。</p></div>
+          <div class="pipe anim" style="--d:.44s"><div class="no">04</div><div class="ic">🪝</div><h4>Agent Hooks</h4><p>保存代码 → 跑测试 → 自动投喂，钩子就是它的消化系统。</p></div>
+          <div class="pipe anim" style="--d:.52s"><div class="no">05</div><div class="ic">🎛️</div><h4>多模型</h4><p>Claude 写人格，DeepSeek 审代码，Auto 负责调度。</p></div>
+        </div>
+        <div class="s6-bottom">
+          <div class="code-card anim-l" style="--d:.58s">
+            <div><span class="file">.kiro/hooks/feed-hamster.kiro.hook</span></div>
+            <div><span class="k">when</span>: <span class="s">fileEdit</span> → <span class="s">app/**/*.tsx</span><span class="cur"></span></div>
+            <div><span class="k">then</span>: <span class="s">askAgent</span></div>
+            <div>&nbsp;&nbsp;<span class="c"># 1) 跑测试，别喂坏瓜子</span></div>
+            <div>&nbsp;&nbsp;run <span class="s">npm test</span></div>
+            <div>&nbsp;&nbsp;<span class="c"># 2) 投喂仓鼠</span></div>
+            <div>&nbsp;&nbsp;curl -X POST <span class="s">/feed</span></div>
+          </div>
+          <div class="kiro-quote anim-r" style="--d:.64s">
+            <p>“Kiro Hook<br>就是它的消化系统。”</p>
+            <span>WE BUILT IT WITH KIRO. KIRO FEEDS IT.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 07 传播 ================= -->
+    <section class="slide s7" data-slide="7">
+      <div class="slide-bg">
+        <span class="blob blob-gold" style="left:-280px;top:-300px;opacity:.38"></span>
+        <span class="blob blob-pink" style="right:-300px;bottom:-320px;opacity:.28"></span>
+      </div>
+      <div class="inner">
+        <p class="kicker anim" style="--d:.05s">06 / WHY IT SPREADS</p>
+        <h2 class="slide-title anim" style="--d:.12s">它没什么用。<span class="hl">但它会被转发。</span></h2>
+        <div class="s7-grid">
+          <div class="reason anim" style="--d:.2s">
+            <div class="visual"><div class="big-glyph">仓<span>鼠</span></div></div>
+            <h4>名字就是梗</h4>
+            <p>仓库的仓，仓鼠的鼠。听一遍就记住，说一遍就有人笑。</p>
+            <div class="judge">30 秒就能讲清楚</div>
+            <div class="quote">“仓库里养仓鼠，<b>这个谐音谁想出来的？</b>”</div>
+          </div>
+          <div class="reason anim" style="--d:.3s">
+            <div class="visual">
+              <div class="mini-input">⌘ 输入 GitHub 用户名 <b>领养</b></div>
+            </div>
+            <h4>玩的是自己的仓库</h4>
+            <p>每个人都能领到一只不一样的仓鼠——胖瘦、心情、吐槽，全是自己的。</p>
+            <div class="judge">评委可以当场玩自己的仓库</div>
+            <div class="quote">“输入我的用户名，<b>看看我到底有多摆烂。</b>”</div>
+          </div>
+          <div class="reason anim" style="--d:.4s">
+            <div class="visual">
+              <div class="mini-card">
+                <div class="mc-title">REPO HAMSTER CHECKUP</div>
+                <div class="mc-ham">🐹</div>
+                <div class="mc-bar"><i></i></div>
+                <div class="mc-bar"><i style="width:45%"></i></div>
+              </div>
+            </div>
+            <h4>体检报告可以晒</h4>
+            <p>一键生成 4:5 卡片，发群里、发朋友圈，顺手嘲一下那个不 commit 的同事。</p>
+            <div class="judge">作品自带传播素材</div>
+            <div class="quote">“发群里，<b>同事当场破防。</b>”</div>
+          </div>
+        </div>
+        <div class="tape-line anim" style="--d:.54s">USELESS BUT USEFUL · 无用之用</div>
+      </div>
+    </section>
+
+    <!-- ================= 08 结尾 ================= -->
+    <section class="slide s8" data-slide="8">
+      <div class="slide-bg">
+        <span class="blob blob-gold" style="left:-300px;bottom:-340px;opacity:.5"></span>
+        <span class="blob blob-purple" style="right:-300px;top:-320px;opacity:.3"></span>
+        <span class="seed" style="right:20%;top:22%;animation:drift 9s ease-in-out infinite"></span>
+        <span class="seed" style="right:34%;bottom:22%;width:12px;height:17px;animation:drift 12s ease-in-out infinite reverse"></span>
+        <span class="tw" style="right:28%;top:16%;color:var(--gold)">✦</span>
+      </div>
+      <div class="thanks anim" style="--d:.1s">THANK YOU · Q&amp;A</div>
+      <p class="end-small anim" style="--d:.2s">它没什么用。</p>
+      <h2 class="end-big anim" style="--d:.3s">但你会因为它，<br><span class="hl">想多写一行好代码。</span></h2>
+      <div class="cta anim" style="--d:.46s">🐹 代码仓鼠 · 现在就领养 <span>输入你的 GitHub 用户名</span></div>
+      <div class="end-ham anim-s" style="--d:.36s" data-hamster="happy"></div>
+      <div class="team-line anim" style="--d:.6s">KIRO 鬼点子计划 · 无用之用 / USELESS BUT USEFUL</div>
+    </section>
+
+    <!-- chrome -->
+    <div class="chrome top">
+      <div class="brand">
+        <span class="brand-mark" data-logo></span>
+        <span class="brand-text"><b>代码仓鼠</b><i>REPO HAMSTER</i></span>
+      </div>
+      <div class="chrome-right">
+        <span class="pill-track">KIRO 鬼点子计划 · 无用之用</span>
+        <span class="page-num" id="pageNum">01 / 08</span>
+      </div>
+    </div>
+    <div class="chrome bottom">
+      <span>REPO HAMSTER · 2026</span>
+      <span>你的奇思妙想，Kiro 来实现</span>
+    </div>
+    <div class="nav-hint">← → 翻页 · 空格前进</div>
+    <div class="progress" id="progress"></div>
+  </div>
+  <div class="deck-ctrl" id="deckCtrl">
+    <button type="button" data-fit title="适应屏幕">适应</button>
+    <button type="button" data-zoom="-1" title="缩小">−</button>
+    <button type="button" data-zoom="1" title="放大">＋</button>
+    <span class="z" id="zoomLabel">100%</span>
+  </div>
+</div>
+
+<script src="assets/hamster.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 注入仓鼠 & Logo ---------- */
+  function paint() {
+    document.querySelectorAll('[data-logo]').forEach(function (el) { el.innerHTML = Hamster.logo(); });
+    document.querySelectorAll('[data-hamster]').forEach(function (el) {
+      el.innerHTML = Hamster.svg(el.getAttribute('data-hamster'));
+    });
+    document.querySelectorAll('[data-contrib]').forEach(function (grid) {
+      var total = parseInt(grid.getAttribute('data-contrib'), 10) || 70;
+      var fill = parseInt(grid.getAttribute('data-fill'), 10) || 3;
+      var html = '';
+      for (var i = 0; i < total; i++) {
+        var on = (i < fill) || (i % 23 === 4 && i > 20);
+        html += '<span class="cell' + (on ? ' on' : '') + '"></span>';
+      }
+      grid.innerHTML = html;
+    });
+  }
+
+  /* ---------- 缩放适配 ---------- */
+  var deck = document.getElementById('deck');
+  var userZoom = 1;
+  var ZMIN = 0.35, ZMAX = 2.5;
+
+  function viewportSize() {
+    var vv = window.visualViewport;
+    var w = (vv && vv.width) ? vv.width : (document.documentElement.clientWidth || window.innerWidth || 1920);
+    var h = (vv && vv.height) ? vv.height : (document.documentElement.clientHeight || window.innerHeight || 1080);
+    return { w: w, h: h };
+  }
+
+  function fit(reset) {
+    if (reset === true) userZoom = 1;
+    var v = viewportSize();
+    var s = Math.min(v.w / 1920, v.h / 1080);
+    if (!isFinite(s) || s <= 0) s = 1;
+    s = s * userZoom;
+    deck.style.setProperty('--scale', s.toFixed(4));
+    var label = document.getElementById('zoomLabel');
+    if (label) label.textContent = Math.round(s * 100) + '%';
+  }
+
+  function zoomBy(delta) {
+    userZoom = Math.max(ZMIN, Math.min(ZMAX, userZoom + delta));
+    fit(false);
+  }
+
+  /* ---------- 翻页 ---------- */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var total = slides.length;
+  var cur = 0;
+  var pageNum = document.getElementById('pageNum');
+  var progress = document.getElementById('progress');
+
+  function go(n, instant) {
+    n = Math.max(0, Math.min(total - 1, n));
+    cur = n;
+    slides.forEach(function (s, i) {
+      s.classList.toggle('is-active', i === n);
+      s.setAttribute('aria-hidden', i === n ? 'false' : 'true');
+    });
+    pageNum.textContent = String(n + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0');
+    progress.style.width = ((n + 1) / total * 100) + '%';
+    if (history.replaceState) {
+      try { history.replaceState(null, '', '?slide=' + (n + 1)); } catch (e) { /* file:// 下忽略 */ }
+    }
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ' || e.key === 'PageDown') {
+      e.preventDefault(); go(cur + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp' || e.key === 'PageUp') {
+      e.preventDefault(); go(cur - 1);
+    } else if (e.key === 'Home') { go(0); }
+    else if (e.key === 'End') { go(total - 1); }
+    else if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomBy(0.05); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomBy(-0.05); }
+    else if (e.key === '0') { e.preventDefault(); fit(true); }
+  });
+
+  document.querySelectorAll('.slide').forEach(function (s) {
+    s.addEventListener('click', function (e) {
+      if (e.target.closest('a')) return;
+      var r = s.getBoundingClientRect();
+      if (e.clientX < r.left + r.width * 0.28) go(cur - 1);
+      else go(cur + 1);
+    });
+  });
+
+  /* ---------- 启动 ---------- */
+  paint();
+  fit();
+  [0, 60, 250, 800, 1800].forEach(function (t) { setTimeout(function () { fit(); }, t); });
+  window.addEventListener('resize', function () { fit(); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () { fit(); });
+  }
+  window.addEventListener('orientationchange', function () { setTimeout(function () { fit(); }, 120); });
+  window.addEventListener('pageshow', function () { setTimeout(function () { fit(); }, 60); });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { fit(); }).catch(function () {});
+  }
+
+  var ctrl = document.getElementById('deckCtrl');
+  if (ctrl) {
+    ctrl.addEventListener('click', function (e) {
+      var btn = e.target.closest ? e.target.closest('button') : null;
+      if (!btn) return;
+      if (btn.hasAttribute('data-fit')) { fit(true); }
+      else if (btn.hasAttribute('data-zoom')) { zoomBy(parseFloat(btn.getAttribute('data-zoom')) * 0.05); }
+    });
+  }
+
+  var params = new URLSearchParams(location.search);
+  if (params.get('static') === '1') document.body.classList.add('static');
+  var start = parseInt(params.get('slide') || '1', 10) - 1;
+  if (isNaN(start) || start < 0) start = 0;
+  go(start, true);
+})();
+</script>
+</body>
+</html>

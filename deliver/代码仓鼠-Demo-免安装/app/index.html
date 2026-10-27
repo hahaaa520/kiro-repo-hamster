@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代码仓鼠 · 你写代码，它吃饭</title>
+<meta name="description" content="领养一只住在你 GitHub 仓库里的仓鼠：你写代码它吃饭，你摆烂它 emo，它还会把你漏掉的 bug 藏进腮帮子。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='34' r='24' fill='%23F6C878'/%3E%3Ccircle cx='16' cy='18' r='8' fill='%23E9A94F'/%3E%3Ccircle cx='48' cy='18' r='8' fill='%23E9A94F'/%3E%3Ccircle cx='24' cy='31' r='3' fill='%233A2A22'/%3E%3Ccircle cx='40' cy='31' r='3' fill='%233A2A22'/%3E%3Ccircle cx='21' cy='39' r='5' fill='%23FFB4C4' opacity='.7'/%3E%3Ccircle cx='43' cy='39' r='5' fill='%23FFB4C4' opacity='.7'/%3E%3Cpath d='M28 40q4 4 8 0' stroke='%237A4A32' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-blob b1"></div>
+  <div class="bg-blob b2"></div>
+  <div class="bg-dots"></div>
+  <div class="float-seed fs1"></div>
+  <div class="float-seed fs2"></div>
+  <div class="float-seed fs3"></div>
+  <div class="tw tw1">✦</div>
+  <div class="tw tw2">✦</div>
+  <div class="tw tw3">✦</div>
+</div>
+
+<header class="topbar">
+  <a class="brand" href="./" aria-label="代码仓鼠首页">
+    <span class="brand-mark" data-logo></span>
+    <span class="brand-text"><b>代码仓鼠</b><i>REPO HAMSTER</i></span>
+  </a>
+  <div class="topbar-right">
+    <span class="pill pill-track"><span class="pill-dot"></span>无用之用 · Kiro 鬼点子计划</span>
+    <span class="pill pill-hook" id="hookPill" title="Kiro Agent Hook 连接后，保存代码即可投喂仓鼠"><span class="dot"></span><span id="hookText">Kiro Hook 未连接</span></span>
+  </div>
+</header>
+
+<main class="page">
+
+  <section class="hero">
+    <!-- 仓鼠舞台 -->
+    <div class="stage-card" id="stage">
+      <div class="stage-top">
+        <div class="nameplate" id="nameplate">
+          <span class="np-label">仓鼠档案 · REPO PET</span>
+          <b id="petName">等待领养</b>
+          <span id="petMeta">输入用户名，它就住进你的仓库</span>
+        </div>
+        <div class="bubble" id="bubble">
+          <p id="bubbleText">你好呀，你终于来了。我有点饿，先给我一个 GitHub 用户名吧。</p>
+        </div>
+      </div>
+
+      <div class="stage-scene" id="scene">
+        <div class="scene-glow"></div>
+
+        <div class="scene-deco" aria-hidden="true">
+          <div class="contrib-card">
+            <div class="contrib-head"><span>最近 7 天</span><b id="contribCount">— 颗瓜子</b></div>
+            <div class="contrib-grid" id="contribGrid"></div>
+          </div>
+          <span class="scene-sticker">commit = 瓜子</span>
+        </div>
+
+        <div class="platform" aria-hidden="true"></div>
+        <div class="seeds-float" id="seedsFloat" aria-hidden="true"></div>
+        <div class="hamster-host" id="hamsterHost"></div>
+
+        <div class="runaway-scene" id="runawayScene" aria-hidden="true">
+          <div class="empty-cage">
+            <span class="cage-bar"></span><span class="cage-bar"></span><span class="cage-bar"></span>
+            <span class="cage-door"></span>
+            <span class="cage-note">它走了。<br><i>14 天没有 commit。</i></span>
+          </div>
+          <div class="paw-prints">
+            <span>🐾</span><span>🐾</span><span>🐾</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="stage-bottom">
+        <div class="desk-items">
+          <span class="desk-item" data-icon="mug" title="续命咖啡"></span>
+          <span class="desk-item" data-icon="spark" title="Kiro"></span>
+          <span class="desk-item" data-icon="seed" title="一包瓜子"></span>
+        </div>
+        <span class="desk-note">今天也要 commit 哦</span>
+        <span class="stage-hint" id="stageHint">它的口粮，是你的提交记录</span>
+      </div>
+    </div>
+
+    <!-- 右侧面板 -->
+    <div class="side">
+      <section class="panel landing" id="landingPanel">
+        <p class="kicker">USELESS BUT USEFUL</p>
+        <h1>养一只，<br>住在你<b>仓库</b>里的仓鼠。</h1>
+        <p class="lede">它靠你的 <code>commit</code> 吃饭。<br>你卷，它胖；你摆烂，它会 emo 到离家出走。</p>
+
+        <form id="adoptForm" class="adopt" autocomplete="off">
+          <label class="field">
+            <span class="field-icon" data-icon="github"></span>
+            <input id="login" name="login" type="text" placeholder="输入 GitHub 用户名，比如 torvalds" spellcheck="false" autocomplete="off">
+          </label>
+          <button class="btn btn-primary btn-adopt" type="submit" id="adoptBtn"><span>领养它</span><i>→</i></button>
+        </form>
+
+        <div class="chips">
+          <span class="chips-label">或者，看看别人的仓鼠</span>
+          <button class="chip" type="button" data-demo="champion"><span>🐹</span>卷王 · 阿仓</button>
+          <button class="chip" type="button" data-demo="lazy"><span>😴</span>摆烂 · 小睡</button>
+          <button class="chip" type="button" data-demo="normal"><span>🌰</span>普通 · 瓜子</button>
+        </div>
+
+        <p class="fineprint">不用登录，只读取公开仓库。<br>7 天没 commit 它会 emo，14 天……它会走。</p>
+
+        <div class="guide" aria-hidden="true">
+          <div class="guide-step"><b>01</b><div><strong>输入用户名</strong><span>领养一只仓鼠</span></div></div>
+          <div class="guide-step"><b>02</b><div><strong>它住进仓库</strong><span>只读公开数据</span></div></div>
+          <div class="guide-step"><b>03</b><div><strong>commit 喂它</strong><span>越写它越圆</span></div></div>
+        </div>
+      </section>
+
+      <section class="panel report" id="reportPanel" hidden>
+        <div class="report-head">
+          <div class="report-id">
+            <p class="kicker" id="reportKicker">REPO HAMSTER CHECKUP</p>
+            <h2 id="reportName">阿仓<span class="age" id="reportAge">3 岁</span></h2>
+            <p class="report-repo" id="reportRepo">github.com/seedlord/seed-garden</p>
+          </div>
+          <div class="report-actions">
+            <button class="btn btn-primary btn-feed" id="feedBtn"><span>🌰</span>投喂一颗瓜子</button>
+            <button class="btn btn-ghost btn-sm" id="weeklyBtn">生成周报</button>
+          </div>
+        </div>
+
+        <div class="stats" id="stats">
+          <div class="stat" data-stat="weight">
+            <div class="stat-row"><span class="stat-name">体重</span><span class="stat-val" data-val>—</span></div>
+            <div class="stat-bar"><i data-bar></i></div>
+            <p class="stat-tip" data-tip>commit 越多，它越圆</p>
+          </div>
+          <div class="stat" data-stat="mood">
+            <div class="stat-row"><span class="stat-name">心情</span><span class="stat-val" data-val>—</span></div>
+            <div class="stat-bar"><i data-bar></i></div>
+            <p class="stat-tip" data-tip>太久不写代码，它会 emo</p>
+          </div>
+          <div class="stat" data-stat="hunger">
+            <div class="stat-row"><span class="stat-name">饥饿</span><span class="stat-val" data-val>—</span></div>
+            <div class="stat-bar"><i data-bar></i></div>
+            <p class="stat-tip" data-tip>它的口粮，就是你的 commit</p>
+          </div>
+          <div class="stat" data-stat="bond">
+            <div class="stat-row"><span class="stat-name">亲密度</span><span class="stat-val" data-val>—</span></div>
+            <div class="stat-bar"><i data-bar></i></div>
+            <p class="stat-tip" data-tip>多陪陪它，它会记住你</p>
+          </div>
+        </div>
+
+        <div class="speech">
+          <span class="speech-tag">它在说</span>
+          <p id="speechText">……</p>
+        </div>
+
+        <div class="hook-tip">
+          <span class="hook-tip-ic" data-icon="spark" aria-hidden="true"></span>
+          <div class="hook-tip-body">
+            <b>Kiro Hook 投喂</b>
+            <span>在 Kiro 里保存代码，它就会自动吃到一颗瓜子。</span>
+          </div>
+        </div>
+
+        <div class="week-strip">
+          <span class="week-label">本周投喂</span>
+          <div class="week-days" id="weekDays"></div>
+          <span class="week-hint">在 Kiro 里保存代码，也算投喂</span>
+        </div>
+
+        <div class="report-foot">
+          <span class="status-chip" id="stateChip">心情不错</span>
+          <button class="btn btn-link" id="resetBtn" type="button">换一只 ↘</button>
+        </div>
+      </section>
+    </div>
+  </section>
+
+  <!-- 数据面板 -->
+  <section class="dashboard" id="dashboard" hidden>
+    <article class="card feed">
+      <header class="card-head">
+        <h3><span class="ic" data-icon="rice"></span>最近的投喂记录</h3>
+        <p>它把这些 commit 当饭吃。</p>
+      </header>
+      <ul class="commit-list" id="commitList"></ul>
+    </article>
+
+    <article class="card bugs">
+      <header class="card-head">
+        <h3><span class="ic" data-icon="tooth"></span>它藏在腮帮子里的 bug <b class="count" id="bugCount">0</b></h3>
+        <p>轻量提示，不是正式 code review。</p>
+      </header>
+      <ul class="bug-list" id="bugList"></ul>
+      <p class="bug-foot">腮帮子还有空位，它说欢迎多塞一点。</p>
+    </article>
+
+    <article class="card share">
+      <header class="card-head">
+        <h3><span class="ic" data-icon="mail"></span>仓鼠体检报告</h3>
+        <p>发给你那个总不 commit 的同事。</p>
+      </header>
+      <div class="share-preview"><canvas id="shareCanvas" width="1080" height="1350"></canvas></div>
+      <div class="share-actions">
+        <button class="btn btn-primary btn-sm" id="downloadBtn" type="button">保存报告</button>
+        <button class="btn btn-ghost btn-sm" id="refreshCardBtn" type="button">换一张</button>
+      </div>
+    </article>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <span>代码仓鼠 · 你写代码，它吃饭。</span>
+  <span>Built with <b>Kiro</b> · USELESS BUT USEFUL</span>
+</footer>
+
+<div class="loading" id="loading" hidden>
+  <div class="loading-inner">
+    <div class="wheel"><span class="wheel-hamster">🐹</span></div>
+    <p id="loadingText">正在翻你的仓库…</p>
+    <small>它有点饿，别让它等太久</small>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden><span id="toastText"></span></div>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <h3 id="modalTitle">仓鼠周报</h3>
+    <pre id="modalBody"></pre>
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" id="copyReport" type="button">复制周报</button>
+      <button class="btn btn-ghost btn-sm" id="closeModal" type="button">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/hamster.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

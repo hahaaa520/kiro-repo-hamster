@@ -1,0 +1,11 @@
+{
+  "name": "仓鼠周报",
+  "description": "手动触发：汇总本周提交，生成一段可以发群的仓鼠周报",
+  "when": {
+    "type": "userTriggered"
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "读取 git log --since='7 days ago' --pretty=format:'%h %s'，统计提交次数、主要改动与最有趣/最糟糕的一条 commit message，然后按下面的格式输出一段中文周报：\n\n🐹 仓鼠周报 · <名字>\n本周提交：N 次\n最近一次：<时间>\n最辣嗓子的一条：<commit message>\n下周目标：<一句可爱但具体的建议>\n—— 来自你的仓库仓鼠"
+  }
+}

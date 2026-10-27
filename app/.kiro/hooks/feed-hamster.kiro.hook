@@ -1,0 +1,17 @@
+{
+  "name": "投喂仓鼠",
+  "description": "保存前端代码时，先跑测试，再通过本地服务投喂仓鼠（会触发页面里的进食动画）",
+  "when": {
+    "type": "fileEdit",
+    "patterns": [
+      "app/**/*.tsx",
+      "app/**/*.ts",
+      "app/**/*.js",
+      "app/**/*.css"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "1) 在项目根目录运行 npm test；2) 测试通过后执行 curl -X POST http://localhost:5173/feed；3) 确认返回 JSON 中 ok=true。如果本地服务未启动，只汇报测试结果，不要修改任何文件。"
+  }
+}

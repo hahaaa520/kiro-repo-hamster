@@ -1,0 +1,38 @@
+# 大文件 / 本地环境
+tools/
+现场包/
+
+# 打包产物（Demo 小包保留，便于直接下载）
+deliver/*.zip
+!deliver/代码仓鼠-Demo-免安装.zip
+
+# 调试截图与临时脚本
+deck/shots/*
+!deck/shots/slide-01.png
+!deck/shots/slide-02.png
+!deck/shots/slide-03.png
+!deck/shots/slide-04.png
+!deck/shots/slide-05.png
+!deck/shots/slide-06.png
+!deck/shots/slide-07.png
+!deck/shots/slide-08.png
+!deck/shots/app-desktop-1600.png
+!deck/shots/app-dashboard-1600.png
+!deck/shots/app-champion.png
+!deck/shots/app-lazy.png
+!deck/shots/app-eating.png
+!deck/shots/card-pure.png
+!deck/shots/contact-sheet.png
+deck/check_single.mjs
+deck/make_debug_single.mjs
+deck/build_demo_single.mjs
+deck/代码仓鼠-路演.pptx
+deliver/_debug-single.html
+
+# 通用
+__pycache__/
+*.pyc
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
